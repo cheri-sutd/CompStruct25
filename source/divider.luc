@@ -1,0 +1,14 @@
+module divider (
+    input a[32], // dividend
+    input b[32], // divisor
+    output out[32] // a/b
+  ) {
+
+  always {
+   if (b == 0) {
+     out = a/32b00000000000000000000000000000001
+    } else {
+     out = a/b;
+    }
+  }
+}

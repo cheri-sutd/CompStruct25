@@ -1,11 +1,52 @@
 module multiplier (
     input a[32],
     input b[32],
-    output mul[32],
+    output out[32]
 ) {
+    fa fa[496]
+    sig current_row_fa_index[$clog2(496)]
+    sig previous_row_fa_index[$clog2(496)]
     
     always {
-        // implement multiplier unit logic here
-        mul = 0 
+        fa.a = 496x{0}
+        fa.b = 496x{0}
+        fa.cin = 496x{0}
+
+        out[0] = b[0] & a[0]
+
+        repeat(i, 31, 1) {
+            if (i == 1) {
+              repeat(j, 31, 0) {
+                fa.a[j] = a[j] & b[1]
+                fa.b[j] = a[j+1] & b[0]
+                if (j == 0) {
+                    fa.cin[j] = 0
+                } else {
+                    fa.cin[j] = fa.cout[j-1]
+                }
+              }
+              out[1] = fa.s[0];
+              previous_row_fa_index = 0;
+              current_row_fa_index = 31;
+            } else {
+                repeat(k, 32 - i) {
+                    fa.a[current_row_fa_index + k] = a[k] & b[i]
+                    fa.b[current_row_fa_index + k] = fa.s[previous_row_fa_index + 1 + k]
+                    if (k == 0) {
+                        fa.cin[current_row_fa_index + k] = 0
+                    } else {
+                        fa.cin[current_row_fa_index + k] = fa.cout[current_row_fa_index + k - 1]
+                    }
+                }
+                previous_row_fa_index = current_row_fa_index
+                current_row_fa_index = current_row_fa_index + (32 - i)
+                out[i] = fa.s[previous_row_fa_index]
+                        
+            }
+        }
+        fa.a[495] = a[0] & b[31]
+        fa.b[495] = fa.s[494]
+        fa.cin[495] = 0
+        out[31] = fa.s[495]
     }
 }

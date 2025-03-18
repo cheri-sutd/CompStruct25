@@ -1,0 +1,42 @@
+module x_bit_left_shifter #(
+// parameter declaration, to be set during module instantiation
+  SHIFT = 8 : SHIFT > -1 & SHIFT < 32
+  //default shift value of 8 bits but can be any between 0 and 31
+  )(
+    input a[32], //input signal holding value to be shifted 
+    input shift, //control signal that enables or disables shift 
+    input pad, //1 bit value to fill-up empty positions caused by shift 
+    output out[32] //holds results of shift 
+  ) {
+  
+  // MODULE DECLARATIONS
+  // instantiate mux_2 (32 of them)
+    mux_2 mux_2_32[32]
+  // other useful intermediary signals, e.g: shifted_bits[32] 
+    sig shifted_bits[32]
+  always {
+    // assign value to shifted_bits[32] depending on the value of SHIFT
+        
+        shifted_bits = c{a[31-SHIFT:0],SHIFTx{pad}}
+        //empty positions filled by pad 
+        mux_2_32.in = 32x{{2b0}}
+        //32 mux_4 since 1 mux for each bit
+        //each mux selects 1 of 2 inputs. choose to pass original bit from a or shifted bit  
+        
+    // connect the selector of each mux_2 with shift 
+        mux_2_32.s0 = 32x{shift}
+        repeat(i,32){
+                mux_2_32.in[i][0] = a[i] //original bit from a 
+                mux_2_32.in[i][1] = shifted_bits[i] //shifted bit 
+            }
+        out = mux_2_32.out
+        }
+    // 
+    // use a repeat-loop to: 
+    // connect input[0] of each mux_2 with a[i]
+    // connect input[1] of each mux_2 with the shifted_bits[i] 
+  }
+  
+  //example of how this works:
+  //if SHIFT = 4 then 
+  // 1010_1010_1010_1010_1010_1010_1010_1010 --> 1010_1010_1010_1010_1010_1010_1010_0000

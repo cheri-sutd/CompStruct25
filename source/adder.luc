@@ -9,14 +9,18 @@ module adder #(
     output v,
     output n
 ) {
-    
-    
+    rca my_rca(#SIZE(32))
     always {
+        my_rca.a=a
+        //this should simulate 32bit xor if 32bit xor compares bitwise
+        my_rca.b=b^32x{alufn_signal[0]}
+        my_rca.cin=alufn_signal[0]
         // implement adder/subtractor unit logic here
-        out = 0
-        z = 0
-        v = 0 
-        n = 0
+        out = my_rca.s
+        z = ~(|my_rca.s)
+        v = (((alufn_signal[0]^b[31])&a[31])&~my_rca.s[31])|((~(alufn_signal[0]^b[31])&~a[31])&my_rca.s[31])
+        //since we return 1 when negative(msb=1) this should work
+        n = my_rca.s[31]
         
     }
 }

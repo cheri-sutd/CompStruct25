@@ -1,0 +1,251 @@
+module alu_manual_test #(
+    CLK_FREQ = 10000000) 
+(
+    input clk,  // clock
+    input rst,  // reset
+    input io_button[5],
+    input io_dip[3][8],
+    output io_led[3][8],
+    output io_segment[8],
+    output io_select[4],
+    output led[8]
+) {
+    enum States_MANUAL{
+        IDLE,
+        STORE16AFIRST,
+        STORE16ALAST,
+        STORE16BFIRST,
+        STORE16BLAST,
+        COMMAND,
+        DISPLAY
+               
+    }
+    
+    enum States_AUTO{
+        IDLE,
+        NUMA,
+        COMMAND,
+        NUMB,
+        ANSWER,
+        ERROR,
+        CHECK,
+        COMPLETE
+    }
+    
+    sig slowclock
+    const CLK_FREQ1 = $is_sim() ? 1000: 10000000
+    const SLOW_CLOCK_DEFAULT_SPEED = $is_sim() ? 8 : 25
+    const SEVEN_SEG_DIV = $is_sim() ? 3 : 16 // put 6 for sim, 16 on hardware
+    
+    rom_A roma
+    rom_B romb
+    rom_ALUFN romalu
+    rom_Output romout
+    
+    alu alu
+    .clk(clk){
+        edge_detector io_button_edge[5](#RISE(5x{{1}}),#FALL(5x{{1}}))
+        button_conditioner io_button_cond[5](#CLK_FREQ(5x{{CLK_FREQ1}}))
+        edge_detector slow_clock_edge(#RISE(1),#FALL(0))
+        .rst(rst){
+            dff states[$width(States_MANUAL)](#INIT(States_MANUAL.IDLE))
+            dff states_auto[$width(States_AUTO)](#INIT(States_AUTO.IDLE))
+            dff afirsthalf[16]
+            dff asecondthalf[16]
+            dff bfirsthalf[16]
+            dff bsecondhalf[16]
+            dff alufn[6]
+            dff result[32](#INIT(32b0))
+            dff counter[32]
+            dff speed_pointer[$clog2(32)](#INIT(SLOW_CLOCK_DEFAULT_SPEED))
+            dff slow_clock_enable(#INIT(0))
+            dff begin(#INIT(0))
+            dff caseCounter[6]
+            dff v(#INIT(0))
+            dff continue(#INIT(1))
+
+            
+            multi_seven_seg seg(#DIV(SEVEN_SEG_DIV))
+        }
+    }
+    bin_to_dec decimal_renderer(#DIGITS(4), #LEADING_ZEROS(1))
+    always {
+        // implement alu tester logic here
+        alu.a = c{afirsthalf.q,asecondthalf.q}
+        alu.b = c{bfirsthalf.q,bsecondhalf.q}
+        alu.alufn = alufn.q
+
+        afirsthalf.d = afirsthalf.q
+        asecondthalf.d = asecondthalf.q
+        bfirsthalf.d = bfirsthalf.q
+        bsecondhalf.d = bsecondhalf.q
+        alufn.d = alufn.q
+        result.d = result.q
+        begin.d = begin.q
+             
+        speed_pointer.d = speed_pointer.q 
+        counter.d = counter.q + 1
+        slowclock = counter.q[speed_pointer.q]
+
+        states.d = states.q
+        states_auto.d = states_auto.q
+
+        io_button_cond.in = io_button[4:0]
+        io_button_edge.in = io_button_cond.out
+        
+        
+        slow_clock_edge.in = slowclock 
+        slow_clock_enable.d = slow_clock_enable.q
+        
+        caseCounter.d = caseCounter.q
+        v.d=v.q
+        
+        roma.address=caseCounter.q
+        romb.address=caseCounter.q
+        romalu.address=caseCounter.q
+        romout.address=caseCounter.q
+        
+        continue.d=continue.q
+        
+        io_led = {result.q[31:24],result.q[23:16],result.q[7:0]}
+        decimal_renderer.value = c{result.q[31:24],result.q[23:16],result.q[7:0]}
+        led = c{0,0,caseCounter.q[5:0]}
+        //io_segment = 0
+        //io_select = 4hF
+        
+         case(states.q){
+            States_MANUAL.IDLE:
+                if (io_button_edge.out[0] && ~begin.q && ~slow_clock_enable.q){
+                    begin.d = 1
+                    states.d = States_MANUAL.STORE16AFIRST
+                }
+
+                else if (io_button_edge.out[1] && begin.q){
+                    states.d = States_MANUAL.STORE16ALAST
+                }
+                else if (io_button_edge.out[2]&& begin.q){
+                    states.d = States_MANUAL.STORE16BFIRST
+                }
+                else if (io_button_edge.out[4]&& begin.q){
+                    states.d = States_MANUAL.STORE16BLAST
+                }
+                else if (io_button_edge.out[3]&& begin.q){
+                    states.d = States_MANUAL.COMMAND
+                }
+            
+            States_MANUAL.STORE16AFIRST:
+            afirsthalf.d = c{io_dip[1],io_dip[0]}
+            result.d = c{c{io_dip[1],io_dip[0]},16b0}
+            states.d = States_MANUAL.IDLE
+            
+            States_MANUAL.STORE16ALAST:
+            asecondthalf.d = c{io_dip[1],io_dip[0]}
+            result.d = c{afirsthalf.q,io_dip[1],io_dip[0]}
+            states.d = States_MANUAL.IDLE
+            
+            States_MANUAL.STORE16BFIRST:
+            bfirsthalf.d = c{io_dip[1],io_dip[0]}
+            result.d = c{c{io_dip[1],io_dip[0]},16b0}
+            states.d = States_MANUAL.IDLE
+            
+            States_MANUAL.STORE16BLAST:
+            bsecondhalf.d = c{io_dip[1],io_dip[0]}
+            result.d = c{bfirsthalf.q,io_dip[1],io_dip[0]}
+            states.d = States_MANUAL.IDLE
+            
+            States_MANUAL.COMMAND:
+            alufn.d = io_dip[2][5:0]
+            states.d = States_MANUAL.DISPLAY
+            
+            States_MANUAL.DISPLAY:
+            result.d = alu.out
+            states.d = States_MANUAL.IDLE
+            
+            
+        }
+        
+        case(states_auto.q){
+            States_AUTO.IDLE:
+                if (io_button_edge.out[1]&&~begin.q &&~slow_clock_enable.q){
+                    slow_clock_enable.d=1
+                    states_auto.d=States_AUTO.NUMA
+                }
+            else if(io_button_edge.out[1]&&slow_clock_enable.q&&~continue.q){
+                if(caseCounter.q<31){
+                //result.d=b01010101010101010101010101011111
+                    caseCounter.d=caseCounter.q+1
+                    states_auto.d=States_AUTO.NUMA
+                        }
+                else{
+                    states_auto.d=States_AUTO.COMPLETE
+                        }
+            }
+            States_AUTO.NUMA:
+                if(slow_clock_edge.out){
+                    result.d=roma.element
+                    afirsthalf.d=roma.element[31:16]
+                    asecondthalf.d=roma.element[15:0]
+                    states_auto.d=States_AUTO.NUMB
+                    }
+            States_AUTO.NUMB:
+            if(slow_clock_edge.out){
+                    
+            result.d=romb.element
+            bfirsthalf.d=romb.element[31:16]
+            bsecondhalf.d=romb.element[15:0]
+            states_auto.d=States_AUTO.COMMAND
+                }
+            
+            States_AUTO.COMMAND:
+            if(slow_clock_edge.out){
+            result.d=c{26b0,romalu.element}
+            alufn.d=romalu.element
+            states_auto.d=States_AUTO.ANSWER
+                    }
+            
+            States_AUTO.ANSWER:
+            if(slow_clock_edge.out){
+            result.d=alu.out
+            states_auto.d=States_AUTO.ERROR
+                }
+            
+            States_AUTO.ERROR:
+            if(slow_clock_edge.out){
+            if(io_dip[2][7]){
+                result.d[0]=~result.q[0]
+                    }
+            states_auto.d=States_AUTO.CHECK
+                }
+            
+            States_AUTO.CHECK:
+            if(slow_clock_edge.out){
+                if(result.q==romout.element){
+                    result.d=b11111111111111111111111111111111
+                    if(caseCounter.q<31){
+                        caseCounter.d=caseCounter.q+1
+                    states_auto.d=States_AUTO.NUMA
+                    }
+                    else{
+                        states_auto.d=States_AUTO.COMPLETE
+                            }
+                    }
+                else{
+                result.d=b00001111000011110000111100001111
+                        
+                    continue.d=0
+                    states_auto.d=States_AUTO.IDLE
+                        }
+            }
+            States_AUTO.COMPLETE:
+            if(slow_clock_edge.out){
+                result.d=b01010101010101010101010101010101
+                }
+                  
+        }
+    seg.values = decimal_renderer.digits
+        
+    io_segment = ~seg.seg
+    io_select = ~seg.sel
+    }
+    
+}

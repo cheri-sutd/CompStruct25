@@ -1,0 +1,46 @@
+module rom_B (
+    input address[6],
+    output element[32]
+) {
+    
+    sig b[32]
+    
+    always {
+        case (address) {
+      0: b = 32b00001010; // ADD: positive numbers, A=20, B=10, output=30
+      1: b = 32b00000001; //ADD: overflow, A=MAX_VALUE(+ve), B=1, output=MIN_VALUE
+      2: b = 32b00001111; // SUB: A=40, B=15, output=25
+      3: b = 32b00000001; // SUB: check for underflow, A=MIN_VALUE, B=1, output=MAX_VALUE
+      4: b = 32h7FFFFF00; // SUB: check Boundary Values(), A=0, B=0x7FFFFF00, output=negative of 0x7FFFFF00
+      5: b = 32b00000111; // MUL: Positive values, A=12, B=7, output=84
+      6: b = 32b00000000; // MUL: zero multiplication, A=25, B=0, output=0
+      7: b = 32b00000001; // MUL: multiplication by 1, A=0x6AAAAAAA, B=1, output=0x6AAAAAAA
+      8: b = 32b00000000; // AND: with zero, A=60, B=0, output=0
+      9: b = 32hFFFFFFAA; // AND: with complements, A=85, B=-86, output=0
+      10: b = 32hFFFFFFFF; // AND: with ones, A=102, B=-1, output=102
+      11: b = 32b00000000; // OR: with zeroes, A=74, B=0, output=74
+      12: b = 32hFFFFFFFF; // OR: with ones, A=53, B=-1, output=MAX_VALUE
+      13: b = 32b00111111; // OR: with self, check for identity, A=63, B=63, output=63
+      14: b = 32b00000000; // XOR: identity, A=86, B=0, output=86
+      15: b = 32hFFFFFFA5; // XOR: complement, A=90, B=-91, output=MAX_VALUE    
+      16: b = 32b00000110; // LDR: for A=204, B=6, output=204
+      17: b = 32b00000000; // SHL: zero shift, shift amount = 0
+      18: b = 32b00011111; // SHL: max shift, shift amount = 31
+      19: b = 32b00000100; // SHL: boundary, shift amount = 4
+      20: b = 32b00000000; // SHR: zero shift, shift amount = 0
+      21: b = 32b00011111; // SHR: max shift, shift amount = 31
+      22: b = 32b00000100; // SRA: arithmetic shift right, shift amount = 4
+      23: b = 32b00000110; // CMPEQ: true, comparing 6 and 6
+      24: b = 32b00000101; // CMPEQ: false, comparing 4 and 5
+      25: b = 32b00000101; // CMPLT: true, comparing 4 and 5
+      26: b = 32b00000101; // CMPLT: false, comparing 21 and 5
+      27: b = 32b00000111; // CMPLT: false, comparing 7 and 7
+      28: b = 32b00000101; // CMPLE: true, comparing 4 and 5
+      29: b = 32b00000101; // CMPLE: false, comparing 50 and 5
+      30: b = 32b00001000; // DIVIDE: A=16, B=8, output=2
+      31: b = 32b00000100; // MODULO: A=17, B=4, output=1
+      default: b = 32b0000000;
+        }
+        element = b
+    }
+}

@@ -1,0 +1,46 @@
+module rom_A (
+    input address[6],
+    output element[32]
+  ) {
+ 
+    sig a[32];
+    
+  always {
+    case (address) {
+      0: a = 32b0010100; // ADD: positive numbers, A=20, B=10, output=30
+      1: a = 32b01111111111111111111111111111111; // ADD: overflow, A=MAX_VALUE(+ve), B=1, output=MIN_VALUE
+      2: a = 32b00101000; // SUB: A=40, B=15, output=25
+      3: a = 32h80000000; // SUB: check for underflow, A=MIN_VALUE, B=1, output=MAX_VALUE
+      4: a = 32b00000000; // SUB: check Boundary Values(), A=0, B=0x7FFFFF00, output=negative of 0x7FFFFF00
+      5: a = 32b00001100; // MUL: Positive values, A=12, B=7, output=84
+      6: a = 32b00011001; // MUL: zero multiplication, A=25, B=0, output=0
+      7: a = 32h6AAAAAAA; // MUL: multiplication by 1, A=0x6AAAAAAA, B=1, output=0x6AAAAAAA
+      8: a = 32b00111100; // AND: with zero, A=60, B=0, output=0
+      9: a = 32b01010101; // AND: with complements, A=85, B=-86, output=0
+      10: a = 32b01100110; // AND: with ones, A=102, B=MAX_VALUE, output=102
+      11: a = 32b01001010; // OR: with zeroes, A=74, B=0, output=74
+      12: a = 32b00110101; // OR: with ones, A=53, B=MAX_VALUE, output=MAX_VALUE
+      13: a = 32b00111111; // OR: with self, check for identity, A=63, B=63, output=63
+      14: a = 32b01010110; // XOR: identity, A=86, B=0, output=86
+      15: a = 32b01011010; // XOR: complement, A=90, B=-91, output=MAX_VALUE
+      16: a = 32b11001100; // LDR: outputs A, A=204, B=6, output=204
+      17: a = 32b11001100; // SHL: zero shift, A=204, B=0, output=204
+      18: a = 32hFFFFFFFD; // SHL: max shift, A=-3, B=31, output=32h80000000 (only MSB 1, rest 0)
+      19: a = 32h0A00000B; // SHL: boundary, A=0x0A00000B, B=4, output=0xA00000B0
+      20: a = 32b01100100; // SHR: zero shift, A=100, B=0, output=100
+      21: a = 32hC0000000; // SHR: max shift, A=0xC0000000, B=31, output=1
+      22: a = 32h90000000; // SRA: shift right with sign extension, A=0x90000000, B=4, output=0xF9000000
+      23: a = 32b0000110;  // CMPEQ: true, A=6, B=6, output=1
+      24: a = 32b0000100;  // CMPEQ: false, A=4, B=5, output=0
+      25: a = 32b0000100;  // CMPLT: true, A=4, B=5, output=1
+      26: a = 32b0010101;  // CMPLT: false (A > B), A=21, B=5, output=0
+      27: a = 32b00000111; // CMPLT: false (A = B), A=7, B=7, output=0
+      28: a = 32b0000100;  // CMPLE: true, A=4, B=5, output=1
+      29: a = 32b00110010; // CMPLE: false, A=50, B=5, output=0
+      30: a = 32b00010000; // DIVIDE: A=16, B=8, output=2
+      31: a = 32b00010001; // MODULO: A=17, B=4, output=1
+      default: a = 32b0000000;
+    }
+        element = a;
+  }
+}

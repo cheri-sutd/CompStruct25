@@ -1,17 +1,20 @@
 module boolean #(
-    SIZE = 32 : SIZE > 0
+    SIZE ~ 32 : SIZE > 1
 )(
     input a[SIZE],
     input b[SIZE],
     input alufn[6],
-    output bool[SIZE]
+    output out[SIZE]
 ) {
-    
-    
     always {
-        // implement boolean unit logic here
-        bool = 0 
-        
+        //implement boolean logic here 
+        //case: checks the value of alufnb[3:0] to determine which operation to perform.
+        case(alufn[3:0]) { // Multiplexer
+            b1000: out = a & b; // AND: 1000
+            b1110: out = a | b; // OR: 1110
+            b0110: out = a ^ b; // XOR: 0110
+            b1010: out = a;     // "A": 1010
+            default: out = 0;   // Default case
+        }
     }
-    
 }

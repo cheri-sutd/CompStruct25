@@ -7,14 +7,84 @@ module alu (
     output v,
     output n
 ) {
-    
+    const SIZE = 32
+    adder adder(#SIZE(32))
+    compare compare
+    boolean boolean(#SIZE(32))
+    shifter shifter
+    multiplier multiplier
+    divider divider
+    modulo modulo
+    mux_4 mux4[32]
+    mux_4 mux4_01[32]
+    mux_2 mux2[32]
+    sig add_ctr[6]
+
+
     
     
     always {
-        // implement alu logic here
-        out = 0 
-        z = 0
-        v = 0 
-        n = 0    
+        adder.a = a
+        adder.b = b
+        adder.alufn_signal = alufn
+        
+        z = adder.z;
+        v = adder.v;
+        n = adder.n;
+
+        compare.z = adder.z
+        compare.v = adder.v
+        compare.n = adder.n
+        compare.alufn = alufn
+    
+        boolean.a = a
+        boolean.b = b
+        boolean.alufn = alufn
+        
+        shifter.a = a
+        shifter.b = b[4:0]
+        shifter.alufn = alufn
+        
+        multiplier.a = a
+        multiplier.b = b
+        
+        divider.a = a
+        divider.b = b
+        
+        modulo.a = a
+        modulo.b = b
+        
+        mux4.s0 = 32x{alufn[4]}
+        mux4.s1 = 32x{alufn[5]}
+        mux4_01.s0=32x{alufn[0]}
+        mux4_01.s1=32x{alufn[1]}
+        mux2.s0=32x{alufn[2]}
+        
+        repeat (i, 32) {
+            mux4.in[i][0]=mux4_01.out[i]
+            mux4.in[i][1]=boolean.out[i]
+            mux4.in[i][2]=shifter.shift[i]
+            mux4_01.in[i][0]=adder.out[i]
+            mux4_01.in[i][1]=mux2.out[i]
+            mux4_01.in[i][2]=multiplier.out[i]
+            mux4_01.in[i][3]=divider.out[i]
+            mux2.in[i][0]=adder.out[i]
+            mux2.in[i][1]=modulo.out[i]
+            
+            if(i==0){
+                mux4.in[i][3]=compare.cmp
+            }
+            else{
+                mux4.in[i][3]=0
+            }
+            //out[i] = mux4.out[i]
+
+        }
+        /*if (alufn[5] == 1 && alufn[4] ==1 && alufn[3] ==0 && alufn[2] == 0 && alufn[1] ==1 && alufn[0] ==1) {
+            
+        } else {
+           out = mux4.out
+        }*/
+        out = mux4.out
     }
 }
